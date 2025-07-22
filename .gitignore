@@ -1,0 +1,19 @@
+# Ignore Python virtual environment
+venv/
+
+# Ignore temporary/log files
+*.log
+*.csv
+
+# Ignore Airflow-related logs and metadata
+airflow/
+logs/
+dags/__pycache__/
+
+# Ignore compiled Python files
+*.pyc
+__pycache__/
+
+# Ignore system files
+.DS_Store
+Thumbs.db
