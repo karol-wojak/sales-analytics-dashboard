@@ -295,5 +295,20 @@ services:
       airflow-init:
         condition: service_completed_successfully
 
+  mysql:
+    image: mysql:8.0
+    container_name: airflow-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root         # Root password for MySQL
+      MYSQL_DATABASE: sales_db          # Default database name
+      MYSQL_USER: airflow               # Additional user account
+      MYSQL_PASSWORD: airflow           # Password for the user
+    ports:
+      - "3306:3306"  # Exposes MySQL on port 3306
+    volumes:
+      - mysql_data:/var/lib/mysql  # Persistent storage for MySQL data
+
 volumes:
-  postgres-db-volume:
+  mysql_data:            # Declares the MySQL persistent volume
+  postgres-db-volume:    # Declares the PostgreSQL volume (if used by Airflow)
