@@ -3,7 +3,7 @@ from pyspark.sql.functions import sum as _sum, col, month
 from pyspark.sql.types import DecimalType
 
 # MySQL Connection Details
-mysql_url = "jdbc:mysql://localhost:3306/SalesDB"
+mysql_url = "jdbc:mysql://airflow-mysql:3306/sales_db"
 mysql_properties = {
     "user": "root",
     "password": "root",
@@ -13,36 +13,36 @@ mysql_properties = {
 # Start SparkSession
 spark = SparkSession.builder \
     .appName("SalesAnalytics") \
-    .config("spark.driver.extraClassPath", "mysql-connector-j-9.3.0.jar") \
+    .config("spark.driver.extraClassPath", "/opt/spark/drivers/mysql-connector-j-9.3.0.jar") \
     .getOrCreate()
 
 # Load Transactions data from MySQL into PySpark
 data = spark.read.jdbc(
     url=mysql_url,
-    table="Transactions",
+    table="transactions",
     properties=mysql_properties
 )
 
 # Ensure "Price" column is Decimal for accurate computations
-data = data.withColumn("Price", col("Price").cast(DecimalType(10, 2)))
+data = data.withColumn("price", col("price").cast(DecimalType(10, 2)))
 
 # Calculate Total Revenue per Product
-total_revenue = data.withColumn("Revenue", col("Price") * col("Quantity")) \
-    .groupBy("Product_Name") \
-    .agg(_sum("Revenue").alias("Total_Revenue")) \
-    .orderBy(col("Total_Revenue").desc())
+total_revenue = data.withColumn("revenue", col("price") * col("quantity")) \
+    .groupBy("product_name") \
+    .agg(_sum("revenue").alias("total_revenue")) \
+    .orderBy(col("total_revenue").desc())
 
 # Calculate Monthly Revenue
-monthly_revenue = data.withColumn("Revenue", col("Price") * col("Quantity")) \
-    .withColumn("Month", month("Date")) \
-    .groupBy("Month") \
-    .agg(_sum("Revenue").alias("Monthly_Revenue")) \
-    .orderBy("Month")
+monthly_revenue = data.withColumn("revenue", col("price") * col("quantity")) \
+    .withColumn("month", month("sale_date")) \
+    .groupBy("month") \
+    .agg(_sum("revenue").alias("monthly_revenue")) \
+    .orderBy("month")
 
 # Save Total Revenue per Product to MySQL
 total_revenue.write.jdbc(
     url=mysql_url,
-    table="RevenuePerProduct",
+    table="revenue_per_product",
     mode="overwrite",  # Clear the table and write fresh data
     properties=mysql_properties
 )
@@ -50,7 +50,7 @@ total_revenue.write.jdbc(
 # Save Monthly Revenue to MySQL
 monthly_revenue.write.jdbc(
     url=mysql_url,
-    table="MonthlyRevenue",
+    table="monthly_revenue",
     mode="overwrite",
     properties=mysql_properties
 )

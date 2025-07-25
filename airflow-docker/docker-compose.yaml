@@ -77,6 +77,7 @@ x-airflow-common:
     - ${AIRFLOW_PROJ_DIR:-.}/config:/opt/airflow/config
     - ${AIRFLOW_PROJ_DIR:-.}/plugins:/opt/airflow/plugins
     - ${AIRFLOW_PROJ_DIR:-.}/requirements.txt:/requirements.txt
+    - /var/run/docker.sock:/var/run/docker.sock
   user: "${AIRFLOW_UID:-50000}:0"
   depends_on:
     &airflow-common-depends-on
@@ -310,45 +311,37 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql  # Persistent storage for MySQL data
 
-  # spark-master:
-  #   image: docker.io/bitnami/spark:3.4
-  #   container_name: spark-master
-  #   environment:
-  #     - SPARK_MODE=master
-  #     - SPARK_RPC_AUTHENTICATION_ENABLED=no
-  #     - SPARK_RPC_ENCRYPTION_ENABLED=no
-  #     - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
-  #   ports:
-  #     - "8081:8081"  # Web UI
-  #     - "7077:7077"  # Cluster mode (for spark-submit)
-  #   volumes:
-  #     - ./drivers:/opt/spark/drivers   # Mount MySQL JDBC Driver
-  #     - ./scripts:/opt/spark/scripts   # Mount folder containing process_data.py
-  #   # networks:
-  #   #   - spark-network
+  spark-master:
+    image: docker.io/bitnami/spark:3.4
+    container_name: spark-master
+    environment:
+      - SPARK_MODE=master
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+    ports:
+      - "8081:8080"  # Web UI
+      - "7077:7077"  # Cluster mode (for spark-submit)
+    volumes:
+      - ./drivers:/opt/spark/drivers   # Mount MySQL JDBC Driver
+      - ./scripts:/opt/spark/scripts   # Mount folder containing process_data.py
 
-  # spark-worker:
-  #   image: docker.io/bitnami/spark:3.4
-  #   container_name: spark-worker
-  #   environment:
-  #     - SPARK_MODE=worker
-  #     - SPARK_MASTER_URL=spark://spark-master:7077  # Register with the Spark master
-  #     - SPARK_WORKER_MEMORY=1G
-  #     - SPARK_WORKER_CORES=1
-  #     - SPARK_WORKER_RETRIES=10
-  #     - SPARK_WORKER_RETRY_INTERVAL=30s
-  #   depends_on:
-  #     - spark-master
-  #   volumes:
-  #     - ./drivers:/opt/spark/drivers   # Mount MySQL JDBC Driver
-  #     - ./scripts:/opt/spark/scripts   # Mount folder containing process_data.py
-  #   # networks:
-  #   #   - spark-network
+  spark-worker:
+    image: docker.io/bitnami/spark:3.4
+    container_name: spark-worker
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077  # Register with the Spark master
+      - SPARK_WORKER_MEMORY=1G
+      - SPARK_WORKER_CORES=1
+      - SPARK_WORKER_RETRIES=10
+      - SPARK_WORKER_RETRY_INTERVAL=30s
+    depends_on:
+      - spark-master
+    volumes:
+      - ./drivers:/opt/spark/drivers   # Mount MySQL JDBC Driver
+      - ./scripts:/opt/spark/scripts   # Mount folder containing process_data.py
 
 volumes:
   mysql_data:            # Declares the MySQL persistent volume
   postgres-db-volume:    # Declares the PostgreSQL volume (if used by Airflow)
-
-# networks:
-#   spark-network:
-#     driver: bridge
