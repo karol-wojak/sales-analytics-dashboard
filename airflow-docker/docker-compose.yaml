@@ -342,6 +342,27 @@ services:
       - ./drivers:/opt/spark/drivers   # Mount MySQL JDBC Driver
       - ./scripts:/opt/spark/scripts   # Mount folder containing process_data.py
 
+  dashboard:
+    build: ./dashboard
+    container_name: sales-dashboard
+    ports:
+      - "5000:5000"  # Flask dashboard will be available on port 5000
+    environment:
+      - MYSQL_HOST=airflow-mysql
+      - MYSQL_PORT=3306
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=root
+      - MYSQL_DATABASE=sales_db
+    depends_on:
+      - mysql
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
 volumes:
   mysql_data:            # Declares the MySQL persistent volume
   postgres-db-volume:    # Declares the PostgreSQL volume (if used by Airflow)
