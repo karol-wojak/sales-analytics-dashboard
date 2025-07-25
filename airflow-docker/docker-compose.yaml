@@ -87,6 +87,7 @@ x-airflow-common:
 
 services:
   postgres:
+    # PostgreSQL for Airflow metadata (used for CeleryExecutor)
     image: postgres:13
     environment:
       POSTGRES_USER: airflow
@@ -298,7 +299,7 @@ services:
   mysql:
     image: mysql:8.0
     container_name: airflow-mysql
-    restart: unless-stopped
+    restart: always
     environment:
       MYSQL_ROOT_PASSWORD: root         # Root password for MySQL
       MYSQL_DATABASE: sales_db          # Default database name
@@ -309,6 +310,45 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql  # Persistent storage for MySQL data
 
+  # spark-master:
+  #   image: docker.io/bitnami/spark:3.4
+  #   container_name: spark-master
+  #   environment:
+  #     - SPARK_MODE=master
+  #     - SPARK_RPC_AUTHENTICATION_ENABLED=no
+  #     - SPARK_RPC_ENCRYPTION_ENABLED=no
+  #     - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+  #   ports:
+  #     - "8081:8081"  # Web UI
+  #     - "7077:7077"  # Cluster mode (for spark-submit)
+  #   volumes:
+  #     - ./drivers:/opt/spark/drivers   # Mount MySQL JDBC Driver
+  #     - ./scripts:/opt/spark/scripts   # Mount folder containing process_data.py
+  #   # networks:
+  #   #   - spark-network
+
+  # spark-worker:
+  #   image: docker.io/bitnami/spark:3.4
+  #   container_name: spark-worker
+  #   environment:
+  #     - SPARK_MODE=worker
+  #     - SPARK_MASTER_URL=spark://spark-master:7077  # Register with the Spark master
+  #     - SPARK_WORKER_MEMORY=1G
+  #     - SPARK_WORKER_CORES=1
+  #     - SPARK_WORKER_RETRIES=10
+  #     - SPARK_WORKER_RETRY_INTERVAL=30s
+  #   depends_on:
+  #     - spark-master
+  #   volumes:
+  #     - ./drivers:/opt/spark/drivers   # Mount MySQL JDBC Driver
+  #     - ./scripts:/opt/spark/scripts   # Mount folder containing process_data.py
+  #   # networks:
+  #   #   - spark-network
+
 volumes:
   mysql_data:            # Declares the MySQL persistent volume
   postgres-db-volume:    # Declares the PostgreSQL volume (if used by Airflow)
+
+# networks:
+#   spark-network:
+#     driver: bridge
