@@ -1,4 +1,4 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, jsonify
 import mysql.connector
 import os
 
@@ -13,33 +13,68 @@ db_config = {
     "database": os.getenv("MYSQL_DATABASE", "sales_db")  # Updated database name
 }
 
-@app.route('/')
-def dashboard():
+def get_db_connection():
+    """Get database connection"""
     try:
-        # Connect to MySQL
-        conn = mysql.connector.connect(**db_config)
-        cursor = conn.cursor()
+        connection = mysql.connector.connect(**db_config)
+        return connection
+    except Exception as e:
+        print(f"Error connecting to database: {e}")
+        return None
 
-        # Fetch Top Products by Revenue (updated table names)
+def get_top_products():
+    """Get top 5 products by revenue"""
+    connection = get_db_connection()
+    if not connection:
+        return []
+    
+    try:
+        cursor = connection.cursor()
         cursor.execute("""
             SELECT product_name, total_revenue 
             FROM revenue_per_product 
             ORDER BY total_revenue DESC 
             LIMIT 5
         """)
-        top_products = cursor.fetchall()
+        result = cursor.fetchall()
+        return result
+    except Exception as e:
+        print(f"Error fetching top products: {e}")
+        return []
+    finally:
+        if connection.is_connected():
+            cursor.close()
+            connection.close()
 
-        # Fetch Monthly Revenue (updated table names)
+def get_monthly_revenue():
+    """Get monthly revenue data"""
+    connection = get_db_connection()
+    if not connection:
+        return []
+    
+    try:
+        cursor = connection.cursor()
         cursor.execute("""
             SELECT month, monthly_revenue
             FROM monthly_revenue
             ORDER BY month
         """)
-        monthly_revenue = cursor.fetchall()
+        result = cursor.fetchall()
+        return result
+    except Exception as e:
+        print(f"Error fetching monthly revenue: {e}")
+        return []
+    finally:
+        if connection.is_connected():
+            cursor.close()
+            connection.close()
 
-        # Close the database connection
-        cursor.close()
-        conn.close()
+@app.route('/')
+def dashboard():
+    try:
+        # Use the extracted functions
+        top_products = get_top_products()
+        monthly_revenue = get_monthly_revenue()
 
         # Pass data to the template
         return render_template('dashboard.html', 
@@ -47,7 +82,21 @@ def dashboard():
                              monthly_revenue=monthly_revenue)
     
     except Exception as e:
-        return f"Database connection error: {str(e)}"
+        return f"Dashboard error: {str(e)}"
+
+@app.route('/api/data')
+def get_data():
+    """API endpoint for chart data"""
+    try:
+        top_products = get_top_products()
+        monthly_revenue = get_monthly_revenue()
+        
+        return jsonify({
+            'top_products': top_products,
+            'monthly_revenue': monthly_revenue
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/health')
 def health_check():
