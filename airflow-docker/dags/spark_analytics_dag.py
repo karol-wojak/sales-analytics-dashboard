@@ -19,7 +19,7 @@ dag = DAG(
     'spark_sales_analytics',
     default_args=default_args,
     description='Process sales data using Apache Spark',
-    schedule_interval=timedelta(hours=6),  # Run every 6 hours
+    schedule_interval=None,  # Triggered by data loading DAG
     catchup=False,  # Don't run for past dates
     tags=['spark', 'analytics', 'sales'],
 )

@@ -1,5 +1,6 @@
 from airflow import DAG
 from airflow.operators.python_operator import PythonOperator
+from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from datetime import datetime, timedelta
 import subprocess
 import os
@@ -19,13 +20,14 @@ with DAG(
     'generate_synthetic_data',
     default_args=default_args,
     description='DAG to run the data_generator.py script daily',
-    schedule_interval='@daily',  # Run once a day
+    schedule_interval='0 10 * * 1-5',  # Monday-Friday at 10:00 AM
     start_date=datetime(2023, 7, 25),
     catchup=False,
+    tags=['data-generation', 'daily', 'source'],
 ) as dag:
     
     def run_data_generator():
-        # Debug: Print the current working directory inside the PythonOperator
+        print(f"Starting data generation at {datetime.now()}")
         print(f"Current working directory: {os.getcwd()}")
 
         try:
@@ -45,11 +47,19 @@ with DAG(
             print(e.stderr)
             raise e
 
-    # Define the PythonOperator task
+    # Task 1: Generate the data
     generate_data_task = PythonOperator(
         task_id='generate_data',
         python_callable=run_data_generator,
     )
 
-    # Set the task in the DAG
-    generate_data_task
+    # Task 2: Trigger data loading DAG after generation completes
+    trigger_load_dag = TriggerDagRunOperator(
+        task_id='trigger_data_loading',
+        trigger_dag_id='load_data_to_mysql',  # Name of the second DAG
+        wait_for_completion=False,  # Don't wait for loading to complete
+        poke_interval=30,  # Check every 30 seconds
+    )
+
+    # Set task dependencies: Generate data THEN trigger loading
+    generate_data_task >> trigger_load_dag
