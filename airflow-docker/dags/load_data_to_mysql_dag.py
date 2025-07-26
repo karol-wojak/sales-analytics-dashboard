@@ -42,8 +42,13 @@ with DAG(
         connection = mysql.connector.connect(**db_config)
         cursor = connection.cursor()
 
+        # Clear existing data first
+        print("Clearing existing data from transactions table...")
+        cursor.execute("TRUNCATE TABLE transactions")
+        print("Existing data cleared successfully!")
 
         # Insert Rows into Transactions Table
+        successful_rows = 0
         for _, row in data.iterrows():
             try:
                 query = """
@@ -59,6 +64,7 @@ with DAG(
                     row['Date']
                 )
                 cursor.execute(query, values)
+                successful_rows += 1
             except (ValueError, KeyError) as e:
                 # Log and continue in case of bad data
                 print(f"Skipping invalid row: {row}, Error: {e}")
@@ -68,7 +74,7 @@ with DAG(
         connection.commit()
         cursor.close()
         connection.close()
-        print("Data successfully loaded into MySQL!")
+        print(f"Data successfully loaded into MySQL! {successful_rows} rows inserted.")
 
     # Define the task
     load_data_task = PythonOperator(
