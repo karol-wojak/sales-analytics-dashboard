@@ -1,9 +1,9 @@
-from airflow import DAG
-from airflow.operators.python_operator import PythonOperator
-from airflow.operators.trigger_dagrun import TriggerDagRunOperator
+from airflow import DAG # type: ignore
+from airflow.operators.python_operator import PythonOperator # type: ignore
+from airflow.operators.trigger_dagrun import TriggerDagRunOperator # type: ignore
 from datetime import datetime, timedelta
-import pandas as pd
-import mysql.connector
+import pandas as pd # type: ignore
+import mysql.connector # type: ignore
 
 # Default arguments for the DAG
 default_args = {
@@ -87,13 +87,12 @@ with DAG(
         python_callable=load_csv_to_mysql
     )
 
-    # Task 2: Trigger Spark analytics DAG after loading completes
-    trigger_spark_dag = TriggerDagRunOperator(
-        task_id='trigger_spark_analytics',
-        trigger_dag_id='spark_sales_analytics',  # Name of the Spark DAG
-        wait_for_completion=False,  # Don't wait for Spark to complete
-        poke_interval=30,  # Check every 30 seconds
+    # Task 2: Trigger MDM processing DAG
+    trigger_mdm_dag = TriggerDagRunOperator(
+        task_id='trigger_mdm_processing',
+        trigger_dag_id='mdm_processing',
+        dag=dag,
     )
 
     # Set task dependencies: Load data THEN trigger Spark processing
-    load_data_task >> trigger_spark_dag
+    load_data_task >> trigger_mdm_dag
